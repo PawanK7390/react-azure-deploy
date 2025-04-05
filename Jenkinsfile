@@ -4,7 +4,7 @@ pipeline {
     environment {
         AZURE_CREDENTIALS_ID = 'jenkins-sp'
         RESOURCE_GROUP = 'rg-react'
-        APP_SERVICE_NAME = 'reactwebappjenkins838'
+        APP_SERVICE_NAME = 'reactwebappjenkins838796'
     }
 
     stages {
@@ -14,42 +14,39 @@ pipeline {
             }
         }
 
-        // ---------- TERRAFORM (OPTIONAL) ----------
         stage('Terraform Init') {
             steps {
                 dir('terraform') {
-                    bat 'terraform init'
+                    bat 'terraform init || exit /b'
                 }
             }
         }
 
-        stage('Terraform Plan and Apply') {
+        stage('Terraform Plan & Apply') {
             steps {
                 dir('terraform') {
-                    bat 'terraform plan -out=tfplan'
-                    bat 'terraform apply -auto-approve tfplan'
+                    bat 'terraform plan -out=tfplan || exit /b'
+                    bat 'terraform apply -auto-approve tfplan || exit /b'
                 }
             }
         }
 
-        // ---------- BUILD REACT ----------
         stage('Install Dependencies & Build') {
             steps {
-                bat 'npm install'
-                bat 'npm run build'
+                bat 'npm install || exit /b'
+                bat 'npm run build || exit /b'
             }
         }
 
-        // ---------- PACKAGE APP ----------
-        stage('Package Application') {
+        stage('Package React Build') {
             steps {
                 bat 'powershell -Command "Remove-Item -Recurse -Force publish -ErrorAction SilentlyContinue"'
-                bat 'powershell -Command "Copy-Item -Recurse -Path build -Destination publish"'
+                bat 'powershell -Command "New-Item -ItemType Directory -Path publish"'
+                bat 'powershell -Command "Copy-Item -Path build\\* -Destination publish -Recurse -Force"'
                 bat 'powershell -Command "Compress-Archive -Path publish\\* -DestinationPath publish.zip -Force"'
             }
         }
 
-        // ---------- DEPLOY TO AZURE ----------
         stage('Deploy to Azure') {
             steps {
                 withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
@@ -65,7 +62,7 @@ pipeline {
             echo ' React App Deployed Successfully!'
         }
         failure {
-            echo ' Deployment Failed. Check logs above.'
+            echo ' Deployment Failed. Check the logs above carefully.'
         }
     }
 }

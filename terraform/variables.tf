@@ -11,5 +11,5 @@ variable "app_service_plan_name" {
 }
 
 variable "app_service_name" {
-  default = "reactwebappjenkins838"
+  default = "reactwebappjenkins838796"
 }
