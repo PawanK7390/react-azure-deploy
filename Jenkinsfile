@@ -26,22 +26,18 @@ pipeline {
             steps {
                 dir('terraform') {
                     script {
-                        def rgExists = bat(
-                            script: 'az group show --name rg-react >nul 2>&1',
+                        def stateExists = bat(
+                            script: 'terraform state show azurerm_resource_group.rg >nul 2>&1',
                             returnStatus: true
-                        )
-                        if (rgExists == 0) {
-                            echo "Resource group exists in Azure. Attempting import into Terraform..."
-                            bat 'terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react'
-                        } else {
-                            echo "Resource group does not exist in Azure. Skipping import."
+                        ) == 0
+
+                        if (!stateExists) {
+                            bat 'terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react || exit /b'
                         }
                     }
                 }
             }
         }
-
-
 
         stage('Terraform Plan & Apply') {
             steps {
@@ -73,6 +69,7 @@ pipeline {
                 withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
                     bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
                     bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type static --target-path .'
+                }
             }
         }
     }
