@@ -72,18 +72,17 @@ pipeline {
             steps {
                 withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
                     bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
-                    az webapp deploy --resource-group rg-react --name reactwebappjenkins838796 --src-path publish.zip --type static --target-path .
-                }
+                    bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type static --target-path .'
             }
         }
     }
 
     post {
         success {
-            echo '✅ React App Deployed Successfully!'
+            echo ' React App Deployed Successfully!'
         }
         failure {
-            echo '❌ Deployment Failed. Check the logs above carefully.'
+            echo ' Deployment Failed. Check the logs above carefully.'
         }
     }
 }
