@@ -25,18 +25,22 @@ pipeline {
         stage('Terraform Import Existing Resources') {
             steps {
                 dir('terraform') {
-                    // Step 1: Try to show the resource
-                    bat 'terraform state show azurerm_resource_group.rg 1>nul 2>&1'
-
-                    // Step 2: If not found, import it
-                    bat '''
-                        if errorlevel 1 (
-                            terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react
+                    script {
+                        def showStatus = bat(
+                            script: 'terraform state show azurerm_resource_group.rg >nul 2>&1',
+                            returnStatus: true
                         )
-                    '''
+                        if (showStatus != 0) {
+                            echo "Resource group not found in state, importing..."
+                            bat 'terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react'
+                        } else {
+                            echo "Resource group already in state, skipping import."
+                        }
+                    }
                 }
             }
         }
+
 
         stage('Terraform Plan & Apply') {
             steps {
