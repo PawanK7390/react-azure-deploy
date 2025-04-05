@@ -50,7 +50,7 @@ pipeline {
 
         stage('Install Dependencies & Build React') {
             steps {
-                bat 'npm ci || exit /b'  // use ci if package-lock.json exists
+                bat 'npm install || exit /b'
                 bat 'npm run build || exit /b'
             }
         }
