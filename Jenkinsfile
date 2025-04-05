@@ -52,12 +52,13 @@ pipeline {
 
         stage('Package React Build') {
             steps {
-                bat 'powershell -Command "Remove-Item -Recurse -Force publish -ErrorAction SilentlyContinue"'
+                bat 'powershell -Command "if (Test-Path publish) { Remove-Item -Recurse -Force publish }"'
                 bat 'powershell -Command "New-Item -ItemType Directory -Path publish"'
                 bat 'powershell -Command "Copy-Item -Path build\\* -Destination publish -Recurse -Force"'
                 bat 'powershell -Command "Compress-Archive -Path publish\\* -DestinationPath publish.zip -Force"'
             }
         }
+
 
         stage('Deploy to Azure') {
             steps {
@@ -71,10 +72,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ React App Deployed Successfully!'
+            echo ' React App Deployed Successfully!'
         }
         failure {
-            echo '❌ Deployment Failed. Check the logs above carefully.'
+            echo ' Deployment Failed. Check the logs above carefully.'
         }
     }
 }
