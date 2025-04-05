@@ -1,5 +1,17 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+
+  required_version = ">= 1.3.0"
+}
+
 provider "azurerm" {
   features {}
+  subscription_id = "eea7dd66-806c-47a7-912f-2e3f1af71f5e" 
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -28,6 +40,7 @@ resource "azurerm_linux_web_app" "react_app" {
   }
 
   app_settings = {
-    "WEBSITES_PORT" = "80"
+    "WEBSITES_PORT"                  = "80"
+    "SCM_DO_BUILD_DURING_DEPLOYMENT" = "true"
   }
-}
+} 
