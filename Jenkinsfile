@@ -55,18 +55,19 @@ pipeline {
             }
         }
 
-        stage('Zip Build Folder Only') {
+        stage('Zip Build Folder') {
             steps {
-                bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item publish.zip -Force }"'
+                bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item -Force publish.zip }"'
                 bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath publish.zip -Force"'
             }
         }
 
-        stage('Deploy to Azure App Service') {
+        stage('Deploy to Azure (Deprecated Method)') {
             steps {
                 withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
                     bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
-                    bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type zip'
+                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings WEBSITE_RUN_FROM_PACKAGE=1 || exit /b'
+                    bat 'az webapp deployment source config-zip --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src publish.zip || exit /b'
                 }
             }
         }
@@ -74,7 +75,7 @@ pipeline {
 
     post {
         success {
-            echo ' React App Deployed Successfully!'
+            echo ' React App Deployed Successfully using config-zip!'
         }
         failure {
             echo ' Deployment Failed. Check the logs above carefully.'
