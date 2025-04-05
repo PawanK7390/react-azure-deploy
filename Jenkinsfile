@@ -22,6 +22,18 @@ pipeline {
             }
         }
 
+        stage('Terraform Import Existing Resources') {
+            steps {
+                dir('terraform') {
+                    // Tries to import the RG if it already exists; continues if it doesn’t
+                    bat '''
+                        terraform state show azurerm_resource_group.rg >nul 2>&1 || ^
+                        terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react
+                    '''
+                }
+            }
+        }
+
         stage('Terraform Plan & Apply') {
             steps {
                 dir('terraform') {
@@ -59,10 +71,10 @@ pipeline {
 
     post {
         success {
-            echo ' React App Deployed Successfully!'
+            echo '✅ React App Deployed Successfully!'
         }
         failure {
-            echo ' Deployment Failed. Check the logs above carefully.'
+            echo '❌ Deployment Failed. Check the logs above carefully.'
         }
     }
 }
