@@ -7,17 +7,7 @@ pipeline {
         APP_SERVICE_NAME = 'reactwebappjenkins838796'
     }
 
-    options {
-        skipDefaultCheckout()
-    }
-
     stages {
-        stage('Clean Workspace') {
-            steps {
-                deleteDir()
-            }
-        }
-
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/PawanK7390/react-azure-deploy.git'
@@ -35,9 +25,15 @@ pipeline {
         stage('Terraform Import Existing Resources') {
             steps {
                 dir('terraform') {
-                    bat 'terraform state show azurerm_resource_group.rg >nul 2>&1'
-                    bat 'terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react'
-                    
+                    // Step 1: Try to show the resource
+                    bat 'terraform state show azurerm_resource_group.rg 1>nul 2>&1'
+
+                    // Step 2: If not found, import it
+                    bat '''
+                        if errorlevel 1 (
+                            terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react
+                        )
+                    '''
                 }
             }
         }
@@ -79,10 +75,10 @@ pipeline {
 
     post {
         success {
-            echo ' React App Deployed Successfully!'
+            echo '✅ React App Deployed Successfully!'
         }
         failure {
-            echo ' Deployment Failed. Check the logs above carefully.'
+            echo '❌ Deployment Failed. Check the logs above carefully.'
         }
     }
 }
