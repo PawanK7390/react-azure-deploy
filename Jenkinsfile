@@ -26,20 +26,21 @@ pipeline {
             steps {
                 dir('terraform') {
                     script {
-                        def showStatus = bat(
-                            script: 'terraform state show azurerm_resource_group.rg >nul 2>&1',
+                        def rgExists = bat(
+                            script: 'az group show --name rg-react >nul 2>&1',
                             returnStatus: true
                         )
-                        if (showStatus != 0) {
-                            echo "Resource group not found in state, importing..."
+                        if (rgExists == 0) {
+                            echo "Resource group exists in Azure. Attempting import into Terraform..."
                             bat 'terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react'
                         } else {
-                            echo "Resource group already in state, skipping import."
+                            echo "Resource group does not exist in Azure. Skipping import."
                         }
                     }
                 }
             }
         }
+
 
 
         stage('Terraform Plan & Apply') {
