@@ -48,28 +48,25 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies & Build') {
+        stage('Install Dependencies & Build React') {
             steps {
-                bat 'npm install || exit /b'
+                bat 'npm ci || exit /b'  // use ci if package-lock.json exists
                 bat 'npm run build || exit /b'
             }
         }
 
-        stage('Package React Build') {
+        stage('Zip Build Folder Only') {
             steps {
-                bat 'powershell -Command "if (Test-Path publish) { Remove-Item -Recurse -Force publish }"'
-                bat 'powershell -Command "New-Item -ItemType Directory -Path publish"'
-                bat 'powershell -Command "Copy-Item -Path build\\* -Destination publish -Recurse -Force"'
-                bat 'powershell -Command "Compress-Archive -Path publish\\* -DestinationPath publish.zip -Force"'
+                bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item publish.zip -Force }"'
+                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath publish.zip -Force"'
             }
         }
 
-        stage('Deploy to Azure') {
+        stage('Deploy to Azure App Service') {
             steps {
                 withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
                     bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
-                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings WEBSITE_RUN_FROM_PACKAGE=1'
-                    bat 'az webapp deployment source config-zip --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src publish.zip'
+                    bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type zip'
                 }
             }
         }
