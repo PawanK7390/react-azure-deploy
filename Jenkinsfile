@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AZURE_CREDENTIALS_ID = 'azure-service-principal-react'
+        AZURE_CREDENTIALS_ID = 'jenkins-sp'
         RESOURCE_GROUP = 'rg-react'
         APP_SERVICE_NAME = 'reactwebappjenkins838'
     }
