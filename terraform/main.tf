@@ -37,6 +37,7 @@ resource "azurerm_linux_web_app" "react_app" {
     application_stack {
       node_version = "18-lts"
     }
+    always_on = false # Not available in Free tier
   }
 
   app_settings = {
