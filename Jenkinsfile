@@ -2,11 +2,9 @@ pipeline {
     agent any
 
     environment {
+        AZURE_CREDENTIALS_ID = 'jenkins-sp'
         RESOURCE_GROUP = 'rg-react'
         APP_SERVICE_NAME = 'reactwebappjenkins838796'
-        ZIP_FILE = 'build.zip'
-        KUDU_USER = 'reactwebappjenkins838796'
-        KUDU_PASS = '96x1BuPphQAmwxyjrArAgqxw2HGndDaemgjTRPKpZkl5znjy97JltAjcJZZq'
     }
 
     stages {
@@ -63,42 +61,21 @@ pipeline {
             }
         }
 
-        stage('Debug ZIP Path') {
+        stage('Deploy to Azure using az webapp deploy') {
             steps {
-                echo "ZIP file will be created at: ${env.ZIP_FILE}"
-            }
-        }
+                withCredentials([azureServicePrincipal(credentialsId: "${AZURE_CREDENTIALS_ID}")]) {
+                    bat 'echo Logging into Azure...'
+                    bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
+                    bat 'az account set --subscription %AZURE_SUBSCRIPTION_ID%'
 
-        stage('Zip Build Folder') {
-            steps {
-                bat """
-                    powershell -Command "if (Test-Path '${env.ZIP_FILE}') { Remove-Item -Force '${env.ZIP_FILE}' }"
-                    powershell -Command "Compress-Archive -Path build\\* -DestinationPath '${env.ZIP_FILE}' -Force"
-                """
-            }
-        }
+                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false'
+                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings WEBSITES_ENABLE_APP_SERVICE_STORAGE=true'
 
-        stage('Verify ZIP') {
-            steps {
-                script {
-                    def zipExists = fileExists("${env.ZIP_FILE}")
-                    if (!zipExists) {
-                        error("${env.ZIP_FILE} not found! Check if zipping succeeded.")
-                    }
-                }
-            }
-        }
+                    bat 'echo Deploying React app using build/ folder...'
+                    bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path build --type static || exit /b'
 
-        stage('Deploy to Azure') {
-            steps {
-                script {
-                    def kuduUrl = "https://${env.APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
-                    bat """
-                        curl --fail -X POST "${kuduUrl}" ^
-                            -u "${env.KUDU_USER}:${env.KUDU_PASS}" ^
-                            --data-binary "@${env.ZIP_FILE}" ^
-                            -H "Content-Type: application/zip"
-                    """
+                    bat 'echo Restarting App Service...'
+                    bat 'az webapp restart --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME%'
                 }
             }
         }
@@ -106,10 +83,10 @@ pipeline {
 
     post {
         success {
-            echo ' React App Deployed Successfully via Kudu ZIP Deploy!'
+            echo ' React App Deployed Successfully using az webapp deploy!'
         }
         failure {
-            echo ' Deployment Failed. Check the logs above carefully.'
+            echo ' Deployment Failed. Check logs and troubleshoot.'
         }
         always {
             cleanWs()
