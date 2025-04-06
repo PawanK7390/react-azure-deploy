@@ -22,21 +22,6 @@ pipeline {
             }
         }
 
-        stage('Terraform Import Existing Resources') {
-            steps {
-                dir('terraform') {
-                    script {
-                        def result = bat(
-                            script: 'terraform state show azurerm_resource_group.rg',
-                            returnStatus: true
-                        )
-                        if (result != 0) {
-                            bat 'terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react || exit /b'
-                        }
-                    }
-                }
-            }
-        }
 
         stage('Terraform Plan & Apply') {
             steps {
