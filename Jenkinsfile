@@ -1,11 +1,17 @@
+
+// This pipeline deploys a React app to Azure App Service via Kudu ZIP Deploy.
+
 pipeline {
     agent any
 
     environment {
-        AZURE_CREDENTIALS_ID = 'jenkins-sp'
         RESOURCE_GROUP = 'rg-react'
         APP_SERVICE_NAME = 'reactwebappjenkins838796'
-        ZIP_FILE = 'build.zip' 
+        ZIP_FILE = 'build.zip'
+
+        //  Kudu Deployment Credentials (Only for Learning/Demo)
+        KUDU_USER = '$reactwebappjenkins838796'
+        KUDU_PASS = '96x1BuPphQAmwxyjrArAgqxw2HGndDaemgjTRPKpZkl5znjy97JltAjcJZZq'
     }
 
     stages {
@@ -39,7 +45,7 @@ pipeline {
             }
         }
 
-        stage('Check Build Folder') {
+        stage('Build Folder') {
             steps {
                 script {
                     def buildExists = fileExists('build\\index.html')
@@ -76,23 +82,17 @@ pipeline {
             }
         }
 
-        stage('Deploy to Azure via Kudu') {
+        stage('Deploy to Azure') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'kudu-deploy-username', variable: 'KUDU_USER'),
-                    string(credentialsId: 'kudu-deploy-password', variable: 'KUDU_PASS')
-                ]) {
-                    script {
-                        def kuduUrl = "https://${env.APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
-                        def deployCmd = """
-                        curl --fail -X POST "${kuduUrl}" ^
-                            -u "${KUDU_USER}:${KUDU_PASS}" ^
-                            --data-binary "@${env.ZIP_FILE}" ^
-                            -H "Content-Type: application/zip"
-                        """
-
-                        bat deployCmd
-                    }
+                script {
+                    def kuduUrl = "https://${env.APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
+                    def deployCmd = """
+                    curl --fail -X POST "${kuduUrl}" ^
+                        -u "${env.KUDU_USER}:${env.KUDU_PASS}" ^
+                        --data-binary "@${env.ZIP_FILE}" ^
+                        -H "Content-Type: application/zip"
+                    """
+                    bat deployCmd
                 }
             }
         }
