@@ -23,6 +23,7 @@ pipeline {
         }
 
 
+
         stage('Terraform Plan & Apply') {
             steps {
                 dir('terraform') {
@@ -52,8 +53,8 @@ pipeline {
 
         stage('Zip Build Folder') {
             steps {
-                bat 'powershell -Command "if (Test-Path dist.zip) { Remove-Item -Force dist.zip }"'
-                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath dist.zip -Force"'
+                bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item -Force publish.zip }"'
+                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath publish.zip -Force"'
             }
         }
 
@@ -67,16 +68,15 @@ pipeline {
                     bat 'echo "Setting subscription..."'
                     bat 'az account set --subscription %AZURE_SUBSCRIPTION_ID%'
 
-                    bat 'echo "Deploying ZIP using classic method..."'
-                    bat '''
-                        az webapp deployment source config-zip ^
-                        --resource-group %RESOURCE_GROUP% ^
-                        --name %APP_SERVICE_NAME% ^
-                        --src dist.zip || exit /b
-                    '''
+                    bat 'echo "Disabling server-side build..."'
+                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false'
+
+                    bat 'echo "Deploying pre-built React app (publish.zip)..."'
+                    bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type zip || exit /b'
                 }
             }
         }
+
 
     }
 
