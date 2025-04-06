@@ -25,6 +25,17 @@ pipeline {
             }
         }
 
+        stage('Terraform Import') {
+            steps {
+                dir('terraform') {
+                    bat '''
+                        terraform import azurerm_resource_group.rg /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react || exit /b
+                        terraform import azurerm_linux_web_app.react_app /subscriptions/eea7dd66-806c-47a7-912f-2e3f1af71f5e/resourceGroups/rg-react/providers/Microsoft.Web/sites/reactwebappjenkins838796 || exit /b
+                    '''
+                }
+            }
+        }
+
         stage('Terraform Plan & Apply') {
             steps {
                 dir('terraform') {
@@ -85,9 +96,9 @@ pipeline {
                     def kuduUrl = "https://${env.APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
                     def deployCmd = """
                     @echo off
-                    curl --fail -X POST "${kuduUrl}" ^
-                        -u "${env.KUDU_USER}:${env.KUDU_PASS}" ^
-                        --data-binary "@${env.ZIP_FILE}" ^
+                    curl --fail -X POST "${kuduUrl}" ^ 
+                        -u "${env.KUDU_USER}:${env.KUDU_PASS}" ^ 
+                        --data-binary "@${env.ZIP_FILE}" ^ 
                         -H "Content-Type: application/zip"
                     """
                     bat deployCmd
