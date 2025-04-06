@@ -54,7 +54,7 @@ pipeline {
             }
         }
 
-        stage(' Build Folder') {
+        stage('Build Folder') {
             steps {
                 script {
                     def buildExists = fileExists('build/index.html')
@@ -67,32 +67,40 @@ pipeline {
 
         stage('Zip Build Folder') {
             steps {
-                bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item -Force publish.zip }"'
-                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath publish.zip -Force"'
+                bat 'powershell -Command "if (Test-Path dist.zip) { Remove-Item -Force dist.zip }"'
+                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath dist.zip -Force"'
             }
         }
 
-        stage('Deploy to Azure ') {
+        stage('Deploy to Azure') {
             steps {
                 withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
+
+                    bat 'echo "Logging into Azure..."'
                     bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
 
-                    // Optional: Ensure no server-side build occurs
-                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false'
+                    bat 'echo "Setting subscription..."'
+                    bat 'az account set --subscription %AZURE_SUBSCRIPTION_ID%'
 
-                    // Deploy zip package (React build)
-                    bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type zip || exit /b'
+                    bat 'echo "Deploying ZIP using classic method..."'
+                    bat '''
+                        az webapp deployment source config-zip ^
+                        --resource-group %RESOURCE_GROUP% ^
+                        --name %APP_SERVICE_NAME% ^
+                        --src dist.zip || exit /b
+                    '''
                 }
             }
         }
+
     }
 
     post {
         success {
-            echo ' React App Deployed Successfully using config-zip!'
+            echo 'React App Deployed Successfully using config-zip!'
         }
         failure {
-            echo ' Deployment Failed. Check the logs above carefully.'
+            echo 'Deployment Failed. Check the logs above carefully.'
         }
     }
 }
