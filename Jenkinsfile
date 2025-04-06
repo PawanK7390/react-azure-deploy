@@ -1,6 +1,3 @@
-
-// This pipeline deploys a React app to Azure App Service via Kudu ZIP Deploy.
-
 pipeline {
     agent any
 
@@ -9,8 +6,7 @@ pipeline {
         APP_SERVICE_NAME = 'reactwebappjenkins838796'
         ZIP_FILE = 'build.zip'
 
-        //  Kudu Deployment Credentials (Only for Learning/Demo)
-        KUDU_USER = '$reactwebappjenkins838796'
+        KUDU_USER = 'reactwebappjenkins838796'
         KUDU_PASS = '96x1BuPphQAmwxyjrArAgqxw2HGndDaemgjTRPKpZkl5znjy97JltAjcJZZq'
     }
 
@@ -65,13 +61,14 @@ pipeline {
         stage('Zip Build Folder') {
             steps {
                 bat """
+                    @echo off
                     powershell -Command "if (Test-Path '${env.ZIP_FILE}') { Remove-Item -Force '${env.ZIP_FILE}' }"
                     powershell -Command "Compress-Archive -Path build\\* -DestinationPath '${env.ZIP_FILE}' -Force"
                 """
             }
         }
 
-        stage('Verify ZIP Exists') {
+        stage('ZIP') {
             steps {
                 script {
                     def zipExists = fileExists("${env.ZIP_FILE}")
@@ -87,6 +84,7 @@ pipeline {
                 script {
                     def kuduUrl = "https://${env.APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
                     def deployCmd = """
+                    @echo off
                     curl --fail -X POST "${kuduUrl}" ^
                         -u "${env.KUDU_USER}:${env.KUDU_PASS}" ^
                         --data-binary "@${env.ZIP_FILE}" ^
