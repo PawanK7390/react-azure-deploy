@@ -56,6 +56,17 @@ pipeline {
             }
         }
 
+        stage('Verify ZIP Exists') {
+            steps {
+                script {
+                    def zipExists = fileExists('publish.zip')
+                    if (!zipExists) {
+                        error("publish.zip not found! Check if zipping succeeded.")
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Azure') {
             steps {
                 withCredentials([azureServicePrincipal(credentialsId: "${AZURE_CREDENTIALS_ID}")]) {
@@ -69,7 +80,7 @@ pipeline {
                     bat "az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
 
                     bat 'echo Deploying pre-built React app (publish.zip)...'
-                    bat "az webapp deployment source config-zip --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src publish.zip || exit /b"
+                    bat "az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type zip || exit /b"
                 }
             }
         }
@@ -77,7 +88,7 @@ pipeline {
 
     post {
         success {
-            echo ' React App Deployed Successfully using config-zip!'
+            echo ' React App Deployed Successfully using az webapp deploy!'
         }
         failure {
             echo ' Deployment Failed. Check the logs above carefully.'
