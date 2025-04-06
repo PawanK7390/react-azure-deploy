@@ -54,7 +54,7 @@ pipeline {
         stage('Zip Build Folder') {
             steps {
                 bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item -Force publish.zip }"'
-                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath publish.zip -Force"'
+                bat 'powershell -Command "& { Set-Location build; Compress-Archive * ../publish.zip -Force }"'
             }
         }
 
@@ -70,6 +70,8 @@ pipeline {
 
                     bat 'echo "Disabling server-side build..."'
                     bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false'
+
+                    bat 'az webapp config appsettings set --resource-group rg-react --name reactwebappjenkins838796 --settings WEBSITES_ENABLE_APP_SERVICE_STORAGE=true'
 
                     bat 'echo "Deploying pre-built React app (publish.zip)..."'
                     bat 'az webapp deploy --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src-path publish.zip --type zip || exit /b'
