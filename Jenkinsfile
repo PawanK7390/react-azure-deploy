@@ -22,8 +22,6 @@ pipeline {
             }
         }
 
-
-
         stage('Terraform Plan & Apply') {
             steps {
                 dir('terraform') {
@@ -40,10 +38,10 @@ pipeline {
             }
         }
 
-        stage('Build Folder') {
+        stage('Check Build Folder') {
             steps {
                 script {
-                    def buildExists = fileExists('build/index.html')
+                    def buildExists = fileExists('build\\index.html')
                     if (!buildExists) {
                         error("Build folder missing or empty. Make sure 'npm run build' succeeded.")
                     }
@@ -54,40 +52,35 @@ pipeline {
         stage('Zip Build Folder') {
             steps {
                 bat 'powershell -Command "if (Test-Path publish.zip) { Remove-Item -Force publish.zip }"'
-                bat 'powershell -Command "& { Compress-Archive -Path build\\* -DestinationPath publish.zip -Force }"'
+                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath publish.zip -Force"'
             }
         }
 
         stage('Deploy to Azure') {
             steps {
-                withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
-
-                    bat 'echo "Logging into Azure..."'
+                withCredentials([azureServicePrincipal(credentialsId: "${AZURE_CREDENTIALS_ID}")]) {
+                    bat 'echo Logging into Azure...'
                     bat 'az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%'
-
-                    bat 'echo "Setting subscription..."'
                     bat 'az account set --subscription %AZURE_SUBSCRIPTION_ID%'
 
-                    bat 'echo "Disabling server-side build..."'
-                    bat 'az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false'
+                    bat 'echo Disabling server-side build...'
+                    bat "az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false"
 
-                    bat 'az webapp config appsettings set --resource-group rg-react --name reactwebappjenkins838796 --settings WEBSITES_ENABLE_APP_SERVICE_STORAGE=true'
+                    bat "az webapp config appsettings set --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --settings WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
 
-                    bat 'echo "Deploying pre-built React app (publish.zip)..."'
-                    bat 'az webapp deployment source config-zip --resource-group rg-react --name reactwebappjenkins838796 --src publish.zip || exit /b'
+                    bat 'echo Deploying pre-built React app (publish.zip)...'
+                    bat "az webapp deployment source config-zip --resource-group %RESOURCE_GROUP% --name %APP_SERVICE_NAME% --src publish.zip || exit /b"
                 }
             }
         }
-
-
     }
 
     post {
         success {
-            echo 'React App Deployed Successfully using config-zip!'
+            echo ' React App Deployed Successfully using config-zip!'
         }
         failure {
-            echo 'Deployment Failed. Check the logs above carefully.'
+            echo ' Deployment Failed. Check the logs above carefully.'
         }
     }
 }
