@@ -5,7 +5,7 @@ pipeline {
         AZURE_CREDENTIALS_ID = 'jenkins-sp'
         RESOURCE_GROUP = 'rg-react'
         APP_SERVICE_NAME = 'reactwebappjenkins838796'
-        ZIP_FILE = 'publish.zip'
+        ZIP_FILE = 'build.zip' 
     }
 
     stages {
@@ -50,19 +50,27 @@ pipeline {
             }
         }
 
+        stage('Debug ZIP Path') {
+            steps {
+                echo "ZIP file will be created at: ${env.ZIP_FILE}"
+            }
+        }
+
         stage('Zip Build Folder') {
             steps {
-                bat 'powershell -Command "if (Test-Path ${ZIP_FILE}) { Remove-Item -Force ${ZIP_FILE} }"'
-                bat 'powershell -Command "Compress-Archive -Path build\\* -DestinationPath ${ZIP_FILE} -Force"'
+                bat """
+                    powershell -Command "if (Test-Path '${env.ZIP_FILE}') { Remove-Item -Force '${env.ZIP_FILE}' }"
+                    powershell -Command "Compress-Archive -Path build\\* -DestinationPath '${env.ZIP_FILE}' -Force"
+                """
             }
         }
 
         stage('Verify ZIP Exists') {
             steps {
                 script {
-                    def zipExists = fileExists("${ZIP_FILE}")
+                    def zipExists = fileExists("${env.ZIP_FILE}")
                     if (!zipExists) {
-                        error("${ZIP_FILE} not found! Check if zipping succeeded.")
+                        error("${env.ZIP_FILE} not found! Check if zipping succeeded.")
                     }
                 }
             }
@@ -75,11 +83,11 @@ pipeline {
                     string(credentialsId: 'kudu-deploy-password', variable: 'KUDU_PASS')
                 ]) {
                     script {
-                        def kuduUrl = "https://${APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
+                        def kuduUrl = "https://${env.APP_SERVICE_NAME}.scm.azurewebsites.net/api/zipdeploy"
                         def deployCmd = """
-                        curl -X POST "${kuduUrl}" ^
+                        curl --fail -X POST "${kuduUrl}" ^
                             -u "${KUDU_USER}:${KUDU_PASS}" ^
-                            --data-binary "@${ZIP_FILE}" ^
+                            --data-binary "@${env.ZIP_FILE}" ^
                             -H "Content-Type: application/zip"
                         """
 
@@ -96,6 +104,9 @@ pipeline {
         }
         failure {
             echo ' Deployment Failed. Check the logs above carefully.'
+        }
+        always {
+            cleanWs()
         }
     }
 }
